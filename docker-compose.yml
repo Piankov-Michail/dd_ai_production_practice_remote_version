@@ -1,0 +1,15 @@
+services:
+    ai-bot:
+        build:
+            context: .
+            dockerfile: Dockerfile # Имя docker-файла (полезно, если оно отличается от названия по умолчанию)
+        image: ai-bot:latest
+        pull_policy: never # Чтобы docker не пытался скачивать образ с таким именем
+        container_name: ai-bot
+        restart: unless-stopped
+        networks:
+            - flowise-network
+
+networks:
+  flowise-network:
+    external: true
