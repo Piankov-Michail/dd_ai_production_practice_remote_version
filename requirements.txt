@@ -1,0 +1,7 @@
+python-telegram-bot==20.5
+requests==2.31.0
+pymupdf==1.23.25
+python-docx==0.8.11
+SpeechRecognition==3.10.0
+numpy==2.3.2
+openai==1.99.3
