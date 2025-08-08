@@ -139,7 +139,7 @@ async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYP
             await update.message.reply_text(f"Ошибка при распознавании речи: {e}")
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Это чат бот с рассуждающей моделью qwen3-1.7b, инструменты: google search, calculator, date. Также можно загрузить файлы TXT, PDF, DOC/DOCX")
+    await update.message.reply_text("Это чат бот с рассуждающей моделью, инструменты: google search, calculator, date. Также можно загрузить файлы TXT, PDF, DOC/DOCX и отправить голосовое сообщение")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
@@ -236,4 +236,5 @@ if __name__ == "__main__":
 
     logger.info("Бот запущен в режиме polling...")
     app.run_polling()
+
 
