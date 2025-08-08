@@ -17,13 +17,13 @@ import numpy as np
 
 from openai import OpenAI
 client = OpenAI(
-  api_key="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",
+  api_key="NVIDIA_KEY",
   base_url="https://integrate.api.nvidia.com/v1"
 )
 
-FLOWISE_URL = "https://cloud.flowiseai.com/api/v1/prediction/bb0e3648-5905-4ab1-bb03-fd8051b8ecba"
+FLOWISE_URL = "FLOWISE_URL"
 
-TELEGRAM_TOKEN = "7779420972:AAHNELc3xSP3LkjevKrZHH9C2R5ngnrBQIA"
+TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
 
 CHUNK_TOKEN_SIZE = 500
 APPROX_CHARS_PER_TOKEN = 4
@@ -236,3 +236,4 @@ if __name__ == "__main__":
 
     logger.info("Бот запущен в режиме polling...")
     app.run_polling()
+
