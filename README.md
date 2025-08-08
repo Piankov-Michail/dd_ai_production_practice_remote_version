@@ -1,6 +1,6 @@
 # dd_ai_production_practice_remote_version
 
-### Launch Flowise: <br><br> <pre>docker build --no-cache -t flowise .</pre> <pre>docker run -d --network=host --name flowise</pre>
+### Launch Flowise: <br><br> <pre>docker build --no-cache -t flowise .</pre> <pre>docker run -d --network=host --name flowise flowise</pre>
 
 ### [Agentflow](https://github.com/Piankov-Michail/dd_ai_production_practice_remote_version/blob/main/Agentflow.json) for importation <br>
 
