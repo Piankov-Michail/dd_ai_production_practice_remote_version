@@ -1,8 +1,9 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-import requests
+import httpx
 import logging
+import asyncio
 
 import mimetypes
 import io
@@ -14,6 +15,10 @@ import speech_recognition as sr
 import subprocess
 import os
 import numpy as np
+
+
+FLOWISE_SEM = asyncio.Semaphore(10)
+
 
 from openai import OpenAI
 client = OpenAI(
@@ -204,18 +209,31 @@ async def process_flowise_request(update: Update, question: str):
     }
     
     try:
-        response = requests.post(FLOWISE_URL, json=payload)
-        if response.status_code == 200:
-            flowise_response = response.json().get("text", "Не получилось обработать ответ.")
-            while(len(flowise_response) > 4096):
-                temp = flowise_response[:4096]
-                await update.message.reply_text(temp)
-                flowise_response = flowise_response[4096:]
-            await update.message.reply_text(flowise_response)
-        else:
-            error_msg = f"Flowise error: {response.status_code} - {response.text}"
-            logger.error(error_msg)
-            await update.message.reply_text("Ошибка при обработке запроса Flowise.")
+        async with FLOWISE_SEM:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    FLOWISE_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code != 200:
+                    error_msg = f"Flowise HTTP {response.status_code}: {response.text[:200]}"
+                    logger.error(error_msg)
+                    await update.message.reply_text("Ошибка сервера Flowise, попробуйте позже")
+                    return
+                try:
+                    data = response.json()
+                except ValueError as e:
+                    logger.error(f"JSON decode error: {str(e)} | Response: {response.text[:200]}")
+                    await update.message.reply_text("Ошибка формата ответа")
+                    return
+                response_text = data.get("text", "Не удалось обработать ответ")
+                for chunk in [response_text[i:i+4096] for i in range(0, len(response_text), 4096)]:
+                    await update.message.reply_text(chunk)
+    except httpx.ReadTimeout:
+        await update.message.reply_text("Сервер не ответил вовремя")
+    except httpx.ConnectError:
+        await update.message.reply_text("Ошибка подключения к серверу")
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         await update.message.reply_text(f"Произошла критическая ошибка при обработке запроса: {str(e)}")
@@ -226,15 +244,22 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start_command))
     
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice_message))
+    handlers = [
+        CommandHandler("start", start_command),
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message),
+        MessageHandler(filters.Document.ALL, handle_document),
+        MessageHandler(filters.VOICE, handle_voice_message)
+    ]
+
+    for handler in handlers:
+        app.add_handler(handler)
     
     app.add_error_handler(error_handler)
 
     logger.info("Бот запущен в режиме polling...")
-    app.run_polling()
-
-
+    app.run_polling(
+        close_loop=False,
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES
+    )
