@@ -22,13 +22,13 @@ FLOWISE_SEM = asyncio.Semaphore(10)
 
 from openai import OpenAI
 client = OpenAI(
-  api_key="NVIDIA_KEY",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   base_url="https://integrate.api.nvidia.com/v1"
 )
 
-FLOWISE_URL = "FLOWISE_URL"
+FLOWISE_URL = os.getenv("FLOWISE_URL")
 
-TELEGRAM_TOKEN = "TELEGRAM_TOKEN"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 CHUNK_TOKEN_SIZE = 500
 APPROX_CHARS_PER_TOKEN = 4
