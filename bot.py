@@ -36,6 +36,7 @@ TOP_CHUNKS = 3
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 SUPPORTED_MIME_TYPES = [
     'text/plain',
@@ -217,8 +218,7 @@ async def process_flowise_request(update: Update, question: str):
                     headers={"Content-Type": "application/json"}
                 )
                 if response.status_code != 200:
-                    error_msg = f"Flowise HTTP {response.status_code}: {response.text[:200]}"
-                    logger.error(error_msg)
+                    logger.error("Flowise HTTP %d: %s", response.status_code, response.text[:200])
                     await update.message.reply_text("Ошибка сервера Flowise, попробуйте позже")
                     return
                 try:
