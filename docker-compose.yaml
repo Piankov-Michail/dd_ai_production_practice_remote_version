@@ -7,8 +7,6 @@ services:
         pull_policy: never
         container_name: ai-bot
         restart: unless-stopped
-        networks:
-            - flowise-network
         environment:
             - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
             - NVIDIA_API_KEY=${NVIDIA_API_KEY}
@@ -16,9 +14,5 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: '1'
+                    cpus: '2'
                     memory: 2G
-
-networks:
-  flowise-network:
-    external: true
