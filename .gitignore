@@ -1,0 +1,21 @@
+# Binaries for programs and plugins
+*.exe
+*.pyc
+
+# Virtual environment
+venv/
+.venv/
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# IDE & OS specific
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+.directory
+
+# Other
+.env
+tmp/
