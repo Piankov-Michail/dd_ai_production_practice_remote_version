@@ -11,7 +11,7 @@ import httpx
 import numpy as np
 from openai import OpenAI
 import speech_recognition as sr  # type: ignore[import-untyped]
-from telegram import Message, Update
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -74,17 +74,16 @@ def split_text_into_chunks(text, chunk_size=CHUNK_TOKEN_SIZE * APPROX_CHARS_PER_
     return chunks
 
 
-def get_embeddings(texts):
-    embeddings = []
+def get_embeddings(texts) -> list[list[float]]:
+    embeddings: list[list[float]] = []
     for text in texts:
         try:
             response = client.embeddings.create(
                 input=[text], model="nvidia/nv-embed-v1", encoding_format="float"
             )
             embeddings.append(response.data[0].embedding)
-        except Exception as e:
-            logger.error(f"Ошибка в get_embeddings: {str(e)}")
-            embeddings.append([])
+        except Exception:
+            logger.exception("Ошибка в get_embeddings")
     return embeddings
 
 
