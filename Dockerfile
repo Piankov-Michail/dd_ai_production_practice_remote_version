@@ -7,10 +7,14 @@ RUN apt-get update && \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Копируем скомпилированный uv из официального образа
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Этот слой будет пересобираться только если изменить зависимости
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-dev
 
 COPY . .
 
