@@ -3,7 +3,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: ai-bot:latest
+        image: ai-bot:0.1.0
         pull_policy: never
         container_name: ai-bot
         restart: unless-stopped
