@@ -1,31 +1,27 @@
+import asyncio
+import io
+import logging
+import mimetypes
+import os
+import subprocess
+
+from docx import Document
+import fitz
+import httpx
+import numpy as np
+from openai import OpenAI
+import speech_recognition as sr
 from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
+    ContextTypes,
     MessageHandler,
     filters,
-    ContextTypes,
 )
-
-import httpx
-import logging
-import asyncio
-
-import mimetypes
-import io
-import fitz
-from docx import Document
-import speech_recognition as sr
-
-import subprocess
-import os
-import numpy as np
-
 
 FLOWISE_SEM = asyncio.Semaphore(10)
 
-
-from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("NVIDIA_API_KEY"), base_url="https://integrate.api.nvidia.com/v1"
@@ -79,9 +75,7 @@ def get_embeddings(texts):
     for text in texts:
         try:
             response = client.embeddings.create(
-                input=[text],
-                model="nvidia/nv-embed-v1",
-                encoding_format="float",
+                input=[text], model="nvidia/nv-embed-v1", encoding_format="float"
             )
             embeddings.append(response.data[0].embedding)
         except Exception as e:
@@ -175,9 +169,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mime_type = document.mime_type or mimetypes.guess_type(document.file_name)[0] or ""
 
     if mime_type not in SUPPORTED_MIME_TYPES:
-        await update.message.reply_text(
-            "Поддерживаются только файлы: TXT, PDF, DOC/DOCX"
-        )
+        await update.message.reply_text("Поддерживаются только файлы: TXT, PDF, DOC/DOCX")
         return
 
     try:
