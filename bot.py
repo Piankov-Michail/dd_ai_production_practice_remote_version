@@ -5,13 +5,13 @@ import mimetypes
 import os
 import subprocess
 
-from docx import Document
-import fitz
+from docx import Document  # type: ignore[import-untyped]
+import fitz  # type: ignore[import-untyped]
 import httpx
 import numpy as np
 from openai import OpenAI
-import speech_recognition as sr
-from telegram import Update
+import speech_recognition as sr  # type: ignore[import-untyped]
+from telegram import Message, Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -28,8 +28,12 @@ client = OpenAI(
 )
 
 FLOWISE_URL = os.getenv("FLOWISE_URL")
+if FLOWISE_URL is None:
+    raise ValueError("Environment variable FLOWISE_URL is not set")
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+if TELEGRAM_TOKEN is None:
+    raise ValueError("Environment variable TELEGRAM_TOKEN is not set")
 
 CHUNK_TOKEN_SIZE = 500
 APPROX_CHARS_PER_TOKEN = 4
@@ -125,7 +129,14 @@ def get_top_chunks(query, chunks, top_n=TOP_CHUNKS):
 
 
 async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    voice = update.message.voice
+    message = update.message
+    if message is None:
+        raise ValueError("Update has no message, voice is unavailable")
+
+    voice = message.voice
+    if voice is None:
+        raise ValueError("Message has no voice")
+
     file = await context.bot.get_file(voice.file_id)
     file_bytes = await file.download_as_bytearray()
 
@@ -148,28 +159,46 @@ async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYP
             text = r.recognize_google(audio, language="ru-RU")
             await process_flowise_request(update, text)
         except sr.UnknownValueError:
-            await update.message.reply_text("Не удалось распознать речь.")
+            await message.reply_text("Не удалось распознать речь.")
         except sr.RequestError as e:
-            await update.message.reply_text(f"Ошибка при распознавании речи: {e}")
+            await message.reply_text(f"Ошибка при распознавании речи: {e}")
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Это чат бот с рассуждающей моделью, инструменты: google search, calculator, date. Также можно загрузить файлы TXT, PDF, DOC/DOCX и отправить голосовое сообщение"
+    message = update.message
+    if message is None:
+        raise ValueError("Update has no message, voice is unavailable")
+
+    await message.reply_text(
+        "Это чат бот с рассуждающей моделью, инструменты: google search, calculator, date. "
+        "Также можно загрузить файлы TXT, PDF, DOC/DOCX и отправить голосовое сообщение"
     )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
+    if (message := update.message) is None:
+        raise ValueError("Update has no message")
+    if (text := message.text) is None:
+        raise ValueError("Message has no text")
+
+    user_message: str = text
     await process_flowise_request(update, user_message)
 
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    document = update.message.document
-    mime_type = document.mime_type or mimetypes.guess_type(document.file_name)[0] or ""
+    if (message := update.message) is None:
+        raise ValueError("Update has no message")
+    if (document := message.document) is None:
+        raise ValueError("Message has no document")
+    if (file_name := document.file_name) is None:
+        raise ValueError("Message has no filename")
+
+    mime_type: str = document.mime_type or mimetypes.guess_type(file_name)[0] or ""
 
     if mime_type not in SUPPORTED_MIME_TYPES:
-        await update.message.reply_text("Поддерживаются только файлы: TXT, PDF, DOC/DOCX")
+        await message.reply_text(
+            "Поддерживаются только следующие форматы: TXT, PDF, DOC/DOCX"
+        )
         return
 
     try:
@@ -193,10 +222,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             file_content = f"Файл {document.file_name} не обрабатывается"
             return
 
-        query = update.message.caption or os.path.splitext(document.file_name)[0]
+        query = message.caption or os.path.splitext(file_name)[0]
 
         chunks = split_text_into_chunks(file_content)
-        logger.info(f"Разбито на {len(chunks)} чанков")
+        logger.info("Разбито на %d чанков", len(chunks))
 
         top_chunks_with_scores = get_top_chunks(query, chunks, TOP_CHUNKS)
         context_parts = []
@@ -209,22 +238,29 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         full_content = f"File: {document.file_name}\n Query: {query}\n\n Most relevant chunks:\n\n{context_text}"
 
         await process_flowise_request(update, full_content)
-    except Exception as e:
-        logger.error(f"Error processing file: {str(e)}")
-        await update.message.reply_text("Ошибка при обработке файла.")
+    except Exception:
+        logger.exception("Error processing file")
+        await message.reply_text("Ошибка при обработке файла.")
 
 
 async def process_flowise_request(update: Update, question: str):
+    chat = update.effective_chat
+    if chat is None:
+        raise ValueError("Update has no chat, chat_id is unavailable")
 
-    chat_id = update.effective_chat.id
+    message = update.message
+    if message is None:
+        raise ValueError("Update has no message")
 
-    payload = {"question": question, "overrideConfig": {"sessionId": str(chat_id)}}
+    chat_id = chat.id
+
+    payload = {"question": question, "overrideConfig": {"sessionId": chat_id}}
 
     try:
         async with FLOWISE_SEM:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
-                    FLOWISE_URL,
+                    FLOWISE_URL,  # type: ignore[arg-type]
                     json=payload,
                     headers={"Content-Type": "application/json"},
                 )
@@ -232,38 +268,41 @@ async def process_flowise_request(update: Update, question: str):
                     logger.error(
                         "Flowise HTTP %d: %s", response.status_code, response.text[:200]
                     )
-                    await update.message.reply_text(
-                        "Ошибка сервера Flowise, попробуйте позже"
-                    )
+                    await message.reply_text("Ошибка сервера Flowise, попробуйте позже")
                     return
                 try:
                     data = response.json()
                 except ValueError as e:
-                    logger.error(
-                        f"JSON decode error: {str(e)} | Response: {response.text[:200]}"
+                    logger.exception(
+                        "JSON decode error. Response: %s", response.text[:200]
                     )
-                    await update.message.reply_text("Ошибка формата ответа")
+                    await message.reply_text("Ошибка формата ответа")
                     return
                 response_text = data.get("text", "Не удалось обработать ответ")
                 for chunk in [
                     response_text[i : i + 4096]
                     for i in range(0, len(response_text), 4096)
                 ]:
-                    await update.message.reply_text(chunk)
+                    await message.reply_text(chunk)
     except httpx.ReadTimeout:
-        await update.message.reply_text("Сервер не ответил вовремя")
+        await message.reply_text("Сервер не ответил вовремя")
     except httpx.ConnectError:
-        await update.message.reply_text("Ошибка подключения к серверу")
+        await message.reply_text("Ошибка подключения к серверу")
     except Exception as e:
         logger.error(f"Error: {str(e)}")
-        await update.message.reply_text(
+        await message.reply_text(
             f"Произошла критическая ошибка при обработке запроса: {str(e)}"
         )
 
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error: {context.error}")
-    await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("An unexpected error occurred: %s", context.error)
+
+    if isinstance(update, Update):
+        if (message := update.message) is None:
+            raise ValueError("Update has no message")
+        await message.reply_text("Произошла ошибка. Попробуйте позже.")
+
 
 
 if __name__ == "__main__":
@@ -281,7 +320,7 @@ if __name__ == "__main__":
 
     app.add_error_handler(error_handler)
 
-    logger.info("Бот запущен в режиме polling...")
+    logger.info("Bot is running in polling mode...")
     app.run_polling(
         close_loop=False, drop_pending_updates=True, allowed_updates=Update.ALL_TYPES
     )

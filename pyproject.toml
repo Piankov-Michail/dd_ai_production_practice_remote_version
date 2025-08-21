@@ -1,9 +1,13 @@
 [project]
 name = "dd-ai-production-practice-remote-version"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.1"
+description = ""
+authors = [
+    { name = "Michail Piankov" },
+    { name = "Vladislav Drepa", email = "vedrepa@etu.ru" },
+]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "~=3.12.0"
 dependencies = [
     "httpx==0.24.1",
     "numpy==2.3.2",
@@ -16,10 +20,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=25.1.0",
-    "isort>=6.0.1",
+    "black>=25.1.0", 
+    "isort>=6.0.1", 
     "mypy>=1.17.1",
 ]
+
+[tool.uv]
+package = false
 
 [tool.black]
 line-length = 90
