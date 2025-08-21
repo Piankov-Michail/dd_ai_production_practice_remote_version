@@ -1,0 +1,54 @@
+[project]
+name = "dd-ai-production-practice-remote-version"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx==0.24.1",
+    "numpy==2.3.2",
+    "openai==1.99.3",
+    "pymupdf==1.23.25",
+    "python-docx==0.8.11",
+    "python-telegram-bot==20.5",
+    "speechrecognition==3.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "mypy>=1.17.1",
+]
+
+[tool.black]
+line-length = 90
+target-version = ['py312']
+skip-magic-trailing-comma = true
+extend-exclude = '''
+(
+  test
+)
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 90
+lines_after_imports = 2
+multi_line_output = 3
+force_to_top = ["__future__"]
+force_sort_within_sections = true
+skip_gitignore = true
+# skip_glob = ["**/migrations/*", "**/settings/*"]
+src_paths = ["."]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "."
+# ignore_missing_imports = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = true
